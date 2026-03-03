@@ -1,0 +1,23 @@
+# Dépendances
+node_modules/
+
+# Build TypeScript
+dist/
+
+# Environnement
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Coverage
+coverage/
+.c8_output/
+
+# OS
+.DS_Store
+Thumbs.db
