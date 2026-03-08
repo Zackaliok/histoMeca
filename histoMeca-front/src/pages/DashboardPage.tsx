@@ -1,8 +1,23 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
+import Sidebar, { type Vehicle, type Selection } from '../components/Sidebar'
+import AddVehicleModal, { type NewVehicleForm } from '../components/AddVehicleModal'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [selection, setSelection] = useState<Selection | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  function handleAddVehicle(data: NewVehicleForm) {
+    const vehicle: Vehicle = {
+      id: crypto.randomUUID(),
+      name: `${data.brand} ${data.model}`,
+      type: data.type === 'auto' ? 'car' : 'moto',
+    }
+    setVehicles((prev) => [...prev, vehicle])
+  }
 
   async function handleLogout() {
     await authService.logout()
@@ -10,9 +25,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-base-200">
+    <div className="h-screen flex flex-col bg-base-200">
 
-      <header className="navbar bg-base-100 shadow-sm px-6">
+      <header className="navbar bg-base-100 shadow-sm px-6 shrink-0">
         <div className="flex-1">
           <span className="text-xl font-bold">🚗 histoMeca 🏍️</span>
         </div>
@@ -23,46 +38,96 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="flex-1 p-6 max-w-5xl mx-auto w-full flex flex-col gap-6">
+      <div className="flex flex-1 min-h-0">
 
-        <div>
-          <h1 className="text-2xl font-bold">Tableau de bord</h1>
-          <p className="text-base-content/60 text-sm mt-1">Bienvenue sur votre espace histoMeca</p>
+        <Sidebar
+          vehicles={vehicles}
+          selection={selection}
+          onSelect={setSelection}
+          onAddVehicle={() => setModalOpen(true)}
+        />
+
+        <main className="flex-1 overflow-y-auto p-6">
+          {selection ? (
+            <VehicleContent vehicles={vehicles} selection={selection} />
+          ) : (
+            <Welcome />
+          )}
+        </main>
+
+      </div>
+
+      <AddVehicleModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleAddVehicle}
+      />
+
+    </div>
+  )
+}
+
+function Welcome() {
+  return (
+    <div className="flex flex-col gap-6 max-w-3xl">
+      <div>
+        <h1 className="text-2xl font-bold">Tableau de bord</h1>
+        <p className="text-base-content/60 text-sm mt-1">Bienvenue sur votre espace histoMeca</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="stat bg-base-100 rounded-box shadow">
+          <div className="stat-title">Véhicules</div>
+          <div className="stat-value">0</div>
+          <div className="stat-desc">enregistrés</div>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="stat bg-base-100 rounded-box shadow">
-            <div className="stat-title">Véhicules</div>
-            <div className="stat-value">0</div>
-            <div className="stat-desc">enregistrés</div>
-          </div>
-          <div className="stat bg-base-100 rounded-box shadow">
-            <div className="stat-title">Entretiens</div>
-            <div className="stat-value">0</div>
-            <div className="stat-desc">ce mois-ci</div>
-          </div>
-          <div className="stat bg-base-100 rounded-box shadow">
-            <div className="stat-title">Prochaine échéance</div>
-            <div className="stat-value text-lg">—</div>
-            <div className="stat-desc">aucune planifiée</div>
-          </div>
+        <div className="stat bg-base-100 rounded-box shadow">
+          <div className="stat-title">Entretiens</div>
+          <div className="stat-value">0</div>
+          <div className="stat-desc">ce mois-ci</div>
         </div>
-
-        <div className="card bg-base-100 shadow">
-          <div className="card-body items-center text-center gap-3">
-            <span className="text-4xl">🚗</span>
-            <h2 className="card-title">Ajoutez votre premier véhicule</h2>
-            <p className="text-base-content/60 text-sm">
-              Commencez par enregistrer un véhicule pour suivre son historique d'entretien.
-            </p>
-            <button className="btn btn-primary mt-2" disabled>
-              Ajouter un véhicule
-            </button>
-          </div>
+        <div className="stat bg-base-100 rounded-box shadow">
+          <div className="stat-title">Prochaine échéance</div>
+          <div className="stat-value text-lg">—</div>
+          <div className="stat-desc">aucune planifiée</div>
         </div>
+      </div>
 
-      </main>
+      <div className="card bg-base-100 shadow">
+        <div className="card-body items-center text-center gap-3">
+          <span className="text-4xl">🚗</span>
+          <h2 className="card-title">Ajoutez votre premier véhicule</h2>
+          <p className="text-base-content/60 text-sm">
+            Utilisez le bouton dans la barre latérale pour enregistrer votre premier véhicule.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
+function VehicleContent({ vehicles, selection }: { vehicles: Vehicle[]; selection: Selection }) {
+  const vehicle = vehicles.find((v) => v.id === selection.vehicleId)
+  if (!vehicle) return null
+
+  const titles: Record<Selection['tab'], string> = {
+    informations: 'Informations générales',
+    historique:   'Historique',
+    entretiens:   'Entretiens',
+    documents:    'Documents',
+  }
+
+  return (
+    <div className="flex flex-col gap-4 max-w-3xl">
+      <div>
+        <h1 className="text-2xl font-bold">{vehicle.name}</h1>
+        <p className="text-base-content/60 text-sm mt-1">{titles[selection.tab]}</p>
+      </div>
+      <div className="card bg-base-100 shadow">
+        <div className="card-body items-center text-center text-base-content/40 py-16">
+          À implémenter
+        </div>
+      </div>
     </div>
   )
 }
