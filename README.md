@@ -86,6 +86,7 @@ L'interface démarre sur `http://localhost:5173`.
 | Service | URL | Description |
 |---------|-----|-------------|
 | API Fastify | `http://localhost:3000` | API REST |
+| Swagger UI | `http://localhost:3000/docs` | Documentation interactive de l'API |
 | Frontend React | `http://localhost:5173` | Interface web |
 | Mongo Express | `http://localhost:8081` | Interface d'administration MongoDB |
 | MongoDB | `localhost:27017` | Base de données |
@@ -94,11 +95,11 @@ L'interface démarre sur `http://localhost:5173`.
 
 ## Backend — histoMeca-back
 
-Architecture plugin Fastify avec auto-chargement. Voir le [README dédié](histoMeca-back/README.md).
+API REST Fastify avec architecture plugin et auto-chargement. Authentification JWT double-token (access + refresh). Voir le [README dédié](histoMeca-back/README.md).
 
 ## Frontend — histoMeca-front
 
-Interface React + Vite avec Tailwind CSS 4 et DaisyUI 5.
+Interface React + Vite avec Tailwind CSS 4 et DaisyUI 5. Routing via react-router-dom, authentification gérée côté client. Voir le [README dédié](histoMeca-front/README.md).
 
 ## Base de données
 
@@ -110,16 +111,21 @@ Collections : `users`, `vehicles`, `history`, `maintenancePlans`.
 
 ## Statut du projet
 
-> En cours de développement — phase d'initialisation
+> En cours de développement
 
 - [x] Scaffold backend (Fastify 5 + TypeScript)
 - [x] Scaffold frontend (React 19 + Vite + TypeScript + Tailwind CSS 4 + DaisyUI 5)
 - [x] Base de données MongoDB (Docker Compose + init script + index)
 - [x] Connexion MongoDB dans Fastify (`@fastify/mongodb`)
 - [x] Architecture BDD documentée (4 collections, schémas, index, requêtes)
-- [x] Page de connexion (LoginForm)
-- [ ] Authentification (JWT)
-- [ ] CRUD véhicules
+- [x] Authentification JWT (login, register, refresh, logout) — backend
+- [x] Service d'authentification frontend (`authService`)
+- [x] Landing page publique avec lien de connexion
+- [x] Page de connexion (`LoginForm`)
+- [x] Dashboard utilisateur connecté
+- [x] Sidebar de navigation par véhicule (menu déroulant par onglet)
+- [x] Modale d'ajout de véhicule
+- [x] Routing frontend (react-router-dom) avec route protégée
+- [ ] CRUD véhicules (API + intégration frontend)
 - [ ] Historique des opérations
 - [ ] Planification des maintenances
-- [ ] API REST complète

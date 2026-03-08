@@ -1,16 +1,39 @@
-# Plugins Folder
+# Plugins
 
-Plugins define behavior that is common to all the routes in your
-application. Authentication, caching, templates, and all the other cross
-cutting concerns should be handled by plugins placed in this folder.
+Les plugins définissent les comportements transversaux de l'application : authentification, base de données, gestion des erreurs, documentation, CORS.
 
-Files in this folder are typically defined through the
-[`fastify-plugin`](https://github.com/fastify/fastify-plugin) module,
-making them non-encapsulated. They can define decorators and set hooks
-that will then be used in the rest of your application.
+Chaque plugin est chargé automatiquement par `@fastify/autoload` depuis ce dossier. Ils sont enregistrés via `fastify-plugin`, ce qui les rend non-encapsulés et accessibles dans toute l'application (décorateurs, hooks).
 
-Check out:
+## Plugins enregistrés
 
-* [The hitchhiker's guide to plugins](https://fastify.dev/docs/latest/Guides/Plugins-Guide/)
-* [Fastify decorators](https://fastify.dev/docs/latest/Reference/Decorators/).
-* [Fastify lifecycle](https://fastify.dev/docs/latest/Reference/Lifecycle/).
+| Fichier | Rôle |
+|---------|------|
+| `cors.ts` | Autorise les requêtes cross-origin depuis le frontend (`localhost:5173` en dev) |
+| `jwt.ts` | Signe et vérifie les JWT ; enregistre `fastify.authenticate` pour protéger les routes |
+| `mongodb.ts` | Connecte MongoDB via `@fastify/mongodb` ; expose `fastify.mongo.db` |
+| `sensible.ts` | Ajoute `fastify.httpErrors` et les helpers de réponse HTTP |
+| `support.ts` | Décorateurs custom partagés entre les routes |
+| `swagger.ts` | Génère la spec OpenAPI 3.1 et expose Swagger UI sur `/docs` |
+
+## Utilisation dans une route
+
+```ts
+// Protéger une route avec JWT
+fastify.get('/me', { onRequest: [fastify.authenticate] }, async (request) => {
+  const { userId } = request.user
+  // ...
+})
+
+// Accéder à MongoDB
+const db = fastify.mongo.db!
+const users = await db.collection('users').find().toArray()
+
+// Renvoyer une erreur HTTP
+throw fastify.httpErrors.notFound('Véhicule introuvable')
+```
+
+## Références
+
+- [Guide des plugins Fastify](https://fastify.dev/docs/latest/Guides/Plugins-Guide/)
+- [Décorateurs Fastify](https://fastify.dev/docs/latest/Reference/Decorators/)
+- [Cycle de vie Fastify](https://fastify.dev/docs/latest/Reference/Lifecycle/)

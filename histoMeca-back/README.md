@@ -10,9 +10,12 @@ API REST de l'application histoMeca, construite avec **Fastify 5** et **TypeScri
 | TypeScript | 5.9 | Langage |
 | [@fastify/mongodb](https://github.com/fastify/fastify-mongodb) | 10 | Connecteur MongoDB |
 | [@fastify/autoload](https://github.com/fastify/fastify-autoload) | 6 | Auto-chargement plugins/routes |
+| [@fastify/jwt](https://github.com/fastify/fastify-jwt) | — | Authentification JWT |
 | [@fastify/sensible](https://github.com/fastify/fastify-sensible) | 6 | Utilitaires HTTP (erreurs, helpers) |
+| [@fastify/cors](https://github.com/fastify/fastify-cors) | — | Gestion CORS |
 | [@fastify/swagger](https://github.com/fastify/fastify-swagger) | — | Génération spec OpenAPI 3.1 |
 | [@fastify/swagger-ui](https://github.com/fastify/fastify-swagger-ui) | — | Interface Swagger UI |
+| bcryptjs | — | Hash des mots de passe |
 | Node.js test runner + c8 | — | Tests + couverture de code |
 
 ---
@@ -24,13 +27,16 @@ histoMeca-back/
 ├── src/
 │   ├── app.ts                  # Configuration Fastify (autoload plugins + routes)
 │   ├── plugins/
+│   │   ├── cors.ts             # CORS (autorisé : localhost:5173 en dev)
+│   │   ├── jwt.ts              # JWT (access token + refresh token)
 │   │   ├── mongodb.ts          # Connexion MongoDB (@fastify/mongodb)
-│   │   ├── sensible.ts         # Plugin utilitaires HTTP
-│   │   ├── support.ts          # Plugin custom (décorateurs partagés)
-│   │   └── swagger.ts          # Documentation OpenAPI (@fastify/swagger + swagger-ui)
+│   │   ├── sensible.ts         # Utilitaires HTTP (httpErrors, assert, etc.)
+│   │   ├── support.ts          # Décorateurs custom partagés
+│   │   └── swagger.ts          # Documentation OpenAPI 3.1
 │   └── routes/
-│       ├── root.ts             # GET /
-│       └── example/index.ts    # GET /example
+│       ├── root.ts             # GET / — health check
+│       └── auth/
+│           └── index.ts        # POST /auth/login|register|refresh|logout
 ├── test/
 │   ├── helper.ts
 │   ├── plugins/
@@ -58,6 +64,9 @@ cp .env.example .env
 | `HOST` | `0.0.0.0` | Adresse d'écoute Fastify |
 | `PORT` | `3000` | Port d'écoute Fastify |
 | `LOG_LEVEL` | `info` | Niveau de log |
+| `JWT_SECRET` | — | Clé secrète JWT (min. 32 caractères, **obligatoire**) |
+| `JWT_EXPIRES_IN` | `15m` | Durée de vie de l'access token |
+| `JWT_REFRESH_EXPIRES_DAYS` | `30` | Durée de vie du refresh token (en jours) |
 
 > MongoDB doit être démarré via Docker Compose depuis la racine du projet avant de lancer le backend.
 
@@ -80,10 +89,38 @@ npm test          # Tests unitaires + couverture de code (c8)
 
 | Plugin | Description |
 |--------|-------------|
-| `swagger.ts` | Génère la spec OpenAPI 3.1 et expose Swagger UI sur `/docs` |
+| `cors.ts` | Autorise les requêtes depuis `localhost:5173` (frontend dev) |
+| `jwt.ts` | Signe et vérifie les JWT ; expose `fastify.authenticate` pour protéger les routes |
 | `mongodb.ts` | Enregistre `@fastify/mongodb`, expose `fastify.mongo.db` dans toute l'app |
 | `sensible.ts` | Ajoute les helpers d'erreurs HTTP (`httpErrors`, `assert`, etc.) |
 | `support.ts` | Décorateurs custom partagés entre les routes |
+| `swagger.ts` | Génère la spec OpenAPI 3.1 et expose Swagger UI sur `/docs` |
+
+### Routes (auto-chargées depuis `src/routes/`)
+
+| Méthode | Chemin | Auth | Description |
+|---------|--------|------|-------------|
+| `GET` | `/` | — | Health check |
+| `POST` | `/auth/register` | — | Création de compte → `{ accessToken, refreshToken }` |
+| `POST` | `/auth/login` | — | Connexion → `{ accessToken, refreshToken }` |
+| `POST` | `/auth/refresh` | — | Rotation du refresh token → `{ accessToken, refreshToken }` |
+| `POST` | `/auth/logout` | JWT | Révocation du refresh token |
+
+### Authentification
+
+Le système utilise deux tokens :
+
+- **Access token** (JWT, 15 min) — transmis dans le header `Authorization: Bearer <token>`
+- **Refresh token** (UUID, 30 jours) — stocké en base (`refreshTokens`), rotation à chaque appel `/auth/refresh`
+
+Pour protéger une route :
+
+```ts
+fastify.get('/me', { onRequest: [fastify.authenticate] }, async (request) => {
+  const { userId } = request.user
+  // ...
+})
+```
 
 ### Documentation OpenAPI
 
@@ -96,22 +133,20 @@ npm test          # Tests unitaires + couverture de code (c8)
 Pour documenter une route, ajouter un `schema` à l'option de la route :
 
 ```ts
-fastify.get('/vehicles', {
+fastify.post('/vehicles', {
   schema: {
     tags: ['vehicles'],
-    summary: 'Liste tous les véhicules de l\'utilisateur',
-    response: {
-      200: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            _id:   { type: 'string' },
-            brand: { type: 'string' },
-            model: { type: 'string' },
-          },
-        },
+    summary: 'Créer un véhicule',
+    body: {
+      type: 'object',
+      required: ['brand', 'model'],
+      properties: {
+        brand: { type: 'string' },
+        model: { type: 'string' },
       },
+    },
+    response: {
+      201: { type: 'object', properties: { _id: { type: 'string' } } },
     },
   },
 }, async (request, reply) => {
@@ -119,23 +154,16 @@ fastify.get('/vehicles', {
 })
 ```
 
-### Routes (auto-chargées depuis `src/routes/`)
-
-| Méthode | Chemin | Description |
-|---------|--------|-------------|
-| `GET` | `/` | Health check |
-| `GET` | `/example` | Route exemple |
-
 ### Accès à MongoDB dans une route
 
 ```ts
 import { FastifyPluginAsync } from 'fastify'
 
 const route: FastifyPluginAsync = async (fastify) => {
-  fastify.get('/vehicles', async (request, reply) => {
+  fastify.get('/vehicles', { onRequest: [fastify.authenticate] }, async (request) => {
     const db = fastify.mongo.db!
-    const vehicles = await db.collection('vehicles').find().toArray()
-    return vehicles
+    const { userId } = request.user
+    return db.collection('vehicles').find({ userId }).toArray()
   })
 }
 
@@ -151,6 +179,6 @@ MongoDB est géré via Docker Compose (voir la racine du projet).
 - **Host** : `localhost:27017`
 - **Base** : `histomeca`
 - **Utilisateur app** : `histomeca` / `histomeca`
-- **Collections** : `users`, `vehicles`, `history`, `maintenancePlans`
+- **Collections** : `users`, `vehicles`, `history`, `maintenancePlans`, `refreshTokens`
 
 L'architecture complète est documentée dans [`docs/database-architecture.md`](../docs/database-architecture.md).
