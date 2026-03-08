@@ -1,12 +1,23 @@
 import { useState } from 'react'
+import { authService } from '../services/authService'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    console.log('Login:', { email, password })
+    setError(null)
+    setLoading(true)
+    try {
+      await authService.login({ email, password })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Identifiants invalides')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -51,8 +62,14 @@ export default function LoginForm() {
               </div>
             </label>
 
-            <button type="submit" className="btn btn-primary w-full">
-              Se connecter
+            {error && (
+              <div role="alert" className="alert alert-error text-sm py-2">
+                {error}
+              </div>
+            )}
+
+            <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+              {loading ? <span className="loading loading-spinner loading-sm" /> : 'Se connecter'}
             </button>
           </form>
 
