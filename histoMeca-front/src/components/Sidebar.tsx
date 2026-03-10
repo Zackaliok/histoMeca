@@ -3,7 +3,7 @@ export type VehicleTab = 'informations' | 'historique' | 'entretiens' | 'documen
 export interface Vehicle {
   id: string
   name: string
-  type: 'car' | 'moto'
+  type: 'auto' | 'moto'
 }
 
 export interface Selection {
@@ -48,7 +48,7 @@ export default function Sidebar({ vehicles, selection, onSelect, onAddVehicle }:
               className="group"
             >
               <summary className="flex items-center gap-2 px-4 py-2 cursor-pointer select-none hover:bg-base-200 list-none">
-                <span>{vehicle.type === 'car' ? '🚗' : '🏍️'}</span>
+                <span>{vehicle.type === 'auto' ? '🚗' : '🏍️'}</span>
                 <span className="flex-1 text-sm font-medium truncate">{vehicle.name}</span>
                 <svg
                   className="w-4 h-4 text-base-content/40 transition-transform group-open:rotate-180"

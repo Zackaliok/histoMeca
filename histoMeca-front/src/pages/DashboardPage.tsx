@@ -1,8 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
+import { vehicleService, type VehicleDTO } from '../services/vehicleService'
 import Sidebar, { type Vehicle, type Selection } from '../components/Sidebar'
 import AddVehicleModal, { type NewVehicleForm } from '../components/AddVehicleModal'
+
+function toSidebarVehicle(dto: VehicleDTO): Vehicle {
+  return {
+    id:   dto.id,
+    name: `${dto.brand} ${dto.model}`,
+    type: dto.type,
+  }
+}
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -10,11 +19,16 @@ export default function DashboardPage() {
   const [selection, setSelection] = useState<Selection | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
-  function handleAddVehicle(data: NewVehicleForm) {
+  useEffect(() => {
+    vehicleService.getAll().then((dtos) => setVehicles(dtos.map(toSidebarVehicle)))
+  }, [])
+
+  async function handleAddVehicle(data: NewVehicleForm) {
+    const { id } = await vehicleService.create(data)
     const vehicle: Vehicle = {
-      id: crypto.randomUUID(),
+      id,
       name: `${data.brand} ${data.model}`,
-      type: data.type === 'auto' ? 'car' : 'moto',
+      type: data.type,
     }
     setVehicles((prev) => [...prev, vehicle])
   }
