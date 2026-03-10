@@ -126,6 +126,7 @@ Collections : `users`, `vehicles`, `history`, `maintenancePlans`.
 - [x] Sidebar de navigation par véhicule (menu déroulant par onglet)
 - [x] Modale d'ajout de véhicule
 - [x] Routing frontend (react-router-dom) avec route protégée
-- [ ] CRUD véhicules (API + intégration frontend)
+- [x] API véhicules — créer, lister, récupérer par IDs (backend)
+- [x] Service véhicules frontend (`vehicleService`) + intégration dashboard
 - [ ] Historique des opérations
 - [ ] Planification des maintenances

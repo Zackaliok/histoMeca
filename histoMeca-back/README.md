@@ -35,8 +35,10 @@ histoMeca-back/
 │   │   └── swagger.ts          # Documentation OpenAPI 3.1
 │   └── routes/
 │       ├── root.ts             # GET / — health check
-│       └── auth/
-│           └── index.ts        # POST /auth/login|register|refresh|logout
+│       ├── auth/
+│       │   └── index.ts        # POST /auth/login|register|refresh|logout
+│       └── vehicles/
+│           └── index.ts        # GET /vehicles, POST /vehicles, POST /vehicles/batch
 ├── test/
 │   ├── helper.ts
 │   ├── plugins/
@@ -105,6 +107,9 @@ npm test          # Tests unitaires + couverture de code (c8)
 | `POST` | `/auth/login` | — | Connexion → `{ accessToken, refreshToken }` |
 | `POST` | `/auth/refresh` | — | Rotation du refresh token → `{ accessToken, refreshToken }` |
 | `POST` | `/auth/logout` | JWT | Révocation du refresh token |
+| `GET` | `/vehicles` | JWT | Liste tous les véhicules de l'utilisateur connecté |
+| `POST` | `/vehicles` | JWT | Crée un véhicule → `{ id }` |
+| `POST` | `/vehicles/batch` | JWT | Récupère des véhicules par tableau d'IDs → `Vehicle[]` |
 
 ### Authentification
 
@@ -116,7 +121,7 @@ Le système utilise deux tokens :
 Pour protéger une route :
 
 ```ts
-fastify.get('/me', { onRequest: [fastify.authenticate] }, async (request) => {
+fastify.get('/me', { preHandler: [fastify.authenticate] }, async (request) => {
   const { userId } = request.user
   // ...
 })
@@ -158,12 +163,15 @@ fastify.post('/vehicles', {
 
 ```ts
 import { FastifyPluginAsync } from 'fastify'
+import { ObjectId } from '@fastify/mongodb'
 
 const route: FastifyPluginAsync = async (fastify) => {
-  fastify.get('/vehicles', { onRequest: [fastify.authenticate] }, async (request) => {
-    const db = fastify.mongo.db!
+  fastify.get('/vehicles', { preHandler: [fastify.authenticate] }, async (request) => {
     const { userId } = request.user
-    return db.collection('vehicles').find({ userId }).toArray()
+    return fastify.mongo.db!
+      .collection('vehicles')
+      .find({ userId: new ObjectId(userId) })
+      .toArray()
   })
 }
 

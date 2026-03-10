@@ -32,9 +32,10 @@ histoMeca-front/
     │   ├── Sidebar.tsx         # Navigation latérale par véhicule
     │   └── AddVehicleModal.tsx # Modale d'ajout de véhicule
     ├── services/
-    │   └── authService.ts      # Appels API auth + gestion tokens (localStorage)
+    │   ├── authService.ts      # Appels API auth + gestion tokens (localStorage)
+    │   └── vehicleService.ts   # Appels API véhicules (créer, lister, batch)
     └── utils/
-        └── api.ts              # Client HTTP générique (apiRequest)
+        └── api.ts              # Client HTTP générique (apiRequest, apiGet)
 ```
 
 ---
@@ -88,6 +89,8 @@ Layout en deux colonnes :
 - **Sidebar gauche** (`Sidebar`) : liste des véhicules de l'utilisateur, chaque véhicule étant un menu déroulant avec 4 onglets (Informations générales, Historique, Entretiens, Documents). Bouton **Ajouter un véhicule** épinglé en bas.
 - **Zone principale** : affiche le contenu correspondant à l'onglet sélectionné, ou le tableau de bord de bienvenue si rien n'est sélectionné.
 
+Les véhicules sont chargés depuis l'API au montage du composant via `vehicleService.getAll()`. L'ajout d'un véhicule appelle `vehicleService.create()` et insère le résultat dans la liste locale.
+
 ---
 
 ## Composants
@@ -103,7 +106,7 @@ Layout en deux colonnes :
 />
 ```
 
-Types exportés : `Vehicle`, `VehicleTab`, `Selection`.
+Types exportés : `Vehicle` (`{ id, name, type: 'auto' | 'moto' }`), `VehicleTab`, `Selection`.
 
 ### `AddVehicleModal`
 
@@ -135,12 +138,25 @@ authService.getAccessToken()            // → string | null
 authService.isAuthenticated()           // → boolean
 ```
 
-### `apiRequest` (`utils/api.ts`)
+### `vehicleService`
+
+Gère les appels API relatifs aux véhicules.
+
+```ts
+vehicleService.getAll()          // → Promise<VehicleDTO[]>   GET /vehicles
+vehicleService.getByIds(ids)     // → Promise<VehicleDTO[]>   POST /vehicles/batch
+vehicleService.create(form)      // → Promise<{ id: string }> POST /vehicles
+```
+
+Type exporté : `VehicleDTO`.
+
+### `apiRequest` / `apiGet` (`utils/api.ts`)
 
 Client HTTP générique utilisé par tous les services.
 
 ```ts
-apiRequest<T>(path, body, accessToken?) // → Promise<T>
+apiRequest<T>(path, body, accessToken?) // → Promise<T>  (POST)
+apiGet<T>(path, accessToken?)           // → Promise<T>  (GET)
 ```
 
 Lève une `Error` avec le message retourné par l'API en cas de réponse non-ok.

@@ -19,7 +19,7 @@ Chaque plugin est chargé automatiquement par `@fastify/autoload` depuis ce doss
 
 ```ts
 // Protéger une route avec JWT
-fastify.get('/me', { onRequest: [fastify.authenticate] }, async (request) => {
+fastify.get('/me', { preHandler: [fastify.authenticate] }, async (request) => {
   const { userId } = request.user
   // ...
 })
