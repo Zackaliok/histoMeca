@@ -15,6 +15,7 @@ interface SidebarProps {
   vehicles: Vehicle[]
   selection: Selection | null
   onSelect: (selection: Selection) => void
+  onHome: () => void
   onAddVehicle: () => void
 }
 
@@ -25,11 +26,27 @@ const TABS: { id: VehicleTab; label: string }[] = [
   { id: 'documents',    label: 'Documents' },
 ]
 
-export default function Sidebar({ vehicles, selection, onSelect, onAddVehicle }: SidebarProps) {
+export default function Sidebar({ vehicles, selection, onSelect, onHome, onAddVehicle }: SidebarProps) {
   return (
     <aside className="w-64 shrink-0 bg-base-100 border-r border-base-200 flex flex-col min-h-0">
 
-      <div className="p-4 border-b border-base-200">
+      <div className="p-2 border-b border-base-200">
+        <button
+          onClick={onHome}
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            selection === null
+              ? 'bg-base-200 text-base-content'
+              : 'hover:bg-base-200 text-base-content/70'
+          }`}
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          Tableau de bord
+        </button>
+      </div>
+
+      <div className="px-4 py-3 border-b border-base-200">
         <span className="text-xs font-semibold uppercase tracking-widest text-base-content/40">
           Mes véhicules
         </span>

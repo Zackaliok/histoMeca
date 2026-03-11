@@ -1,12 +1,26 @@
-import { test } from 'node:test'
-import * as assert from 'node:assert'
-import { build } from '../helper'
+import { test, before, after } from 'node:test'
+import * as assert from 'node:assert/strict'
+import { FastifyInstance } from 'fastify'
+import { startMongo, buildApp } from '../helper'
 
-test('default root route', async (t) => {
-  const app = await build(t)
+let app: FastifyInstance
+let stopMongo: () => Promise<void>
 
-  const res = await app.inject({
-    url: '/'
-  })
-  assert.deepStrictEqual(JSON.parse(res.payload), { root: true })
+before(async () => {
+  const mongo = await startMongo('root_tests')
+  stopMongo = mongo.stop
+  process.env.MONGODB_URI = mongo.uri
+  process.env.JWT_SECRET  = 'test-jwt-secret'
+  app = await buildApp()
+})
+
+after(async () => {
+  await app.close()
+  await stopMongo()
+})
+
+test('GET / retourne { root: true }', async () => {
+  const res = await app.inject({ method: 'GET', url: '/' })
+  assert.equal(res.statusCode, 200)
+  assert.deepEqual(res.json(), { root: true })
 })

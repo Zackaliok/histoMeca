@@ -1,40 +1,41 @@
-// This file contains code that we reuse between our tests.
 import * as path from 'node:path'
-import * as test from 'node:test'
-const helper = require('fastify-cli/helper.js')
+import { FastifyInstance } from 'fastify'
+import { MongoMemoryServer } from 'mongodb-memory-server'
 
-export type TestContext = {
-  after: typeof test.after
-}
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const cliHelper = require('fastify-cli/helper.js')
 
 const AppPath = path.join(__dirname, '..', 'src', 'app.ts')
 
-// Fill in this config with all the configurations
-// needed for testing the application
-function config () {
-  return {
-    skipOverride: true // Register our application with fastify-plugin
-  }
+/**
+ * Démarre une instance MongoDB en mémoire et renvoie l'URI + le handle pour l'arrêt.
+ * @param dbName  Nom de la base — permet d'isoler plusieurs suites de tests.
+ */
+export async function startMongo(dbName: string): Promise<{ uri: string; stop: () => Promise<void> }> {
+  const mongod = await MongoMemoryServer.create()
+  const uri = `${mongod.getUri()}${dbName}`
+  return { uri, stop: async () => { await mongod.stop() } }
 }
 
-// Automatically build and tear down our instance
-async function build (t: TestContext) {
-  // you can set all the options supported by the fastify CLI command
-  const argv = [AppPath]
-
-  // fastify-plugin ensures that all decorators
-  // are exposed for testing purposes, this is
-  // different from the production setup
-  const app = await helper.build(argv, config())
-
-  // Tear down our app after we are done
-  // eslint-disable-next-line no-void
-  t.after(() => void app.close())
-
-  return app
+/**
+ * Construit une instance Fastify complète à partir du code source.
+ * MONGODB_URI et JWT_SECRET doivent être positionnés dans process.env avant l'appel.
+ */
+export async function buildApp(): Promise<FastifyInstance> {
+  return cliHelper.build([AppPath], { skipOverride: true }) as Promise<FastifyInstance>
 }
 
-export {
-  config,
-  build
+/**
+ * Inscrit un utilisateur et renvoie sa paire de tokens.
+ */
+export async function registerUser(
+  app: FastifyInstance,
+  credentials = { email: 'user@test.com', password: 'password123' },
+): Promise<{ accessToken: string; refreshToken: string }> {
+  const res = await app.inject({
+    method:  'POST',
+    url:     '/auth/register',
+    payload: credentials,
+  })
+  return res.json() as { accessToken: string; refreshToken: string }
 }

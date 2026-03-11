@@ -10,7 +10,21 @@ export interface LoginCredentials {
   password: string
 }
 
+export interface RegisterCredentials {
+  email: string
+  password: string
+  firstName?: string
+  lastName?: string
+}
+
 export const authService = {
+  async register(credentials: RegisterCredentials): Promise<AuthTokens> {
+    const tokens = await apiRequest<AuthTokens>('/auth/register', credentials)
+    localStorage.setItem('accessToken', tokens.accessToken)
+    localStorage.setItem('refreshToken', tokens.refreshToken)
+    return tokens
+  },
+
   async login(credentials: LoginCredentials): Promise<AuthTokens> {
     const tokens = await apiRequest<AuthTokens>('/auth/login', credentials)
     localStorage.setItem('accessToken', tokens.accessToken)

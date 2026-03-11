@@ -1,23 +1,24 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { authService } from '../services/authService'
+import { useToast } from '../context/ToastContext'
 
 export default function LoginForm() {
   const navigate = useNavigate()
+  const { toast } = useToast()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
-    setError(null)
     setLoading(true)
     try {
       await authService.login({ email, password })
+      toast('Connexion réussie', 'success')
       navigate('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Identifiants invalides')
+      toast(err instanceof Error ? err.message : 'Identifiants invalides', 'error')
     } finally {
       setLoading(false)
     }
@@ -65,16 +66,17 @@ export default function LoginForm() {
               </div>
             </label>
 
-            {error && (
-              <div role="alert" className="alert alert-error text-sm py-2">
-                {error}
-              </div>
-            )}
-
             <button type="submit" className="btn btn-primary w-full" disabled={loading}>
               {loading ? <span className="loading loading-spinner loading-sm" /> : 'Se connecter'}
             </button>
           </form>
+
+          <p className="text-center text-sm text-base-content/60">
+            Pas encore de compte ?{' '}
+            <Link to="/register" className="link link-primary">
+              S'inscrire
+            </Link>
+          </p>
 
         </div>
       </div>
